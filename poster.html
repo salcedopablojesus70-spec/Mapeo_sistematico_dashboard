@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generador de Póster Científico - Mapeo Sistemático</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- PapaParse para el CSV -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <!-- Chart.js para los gráficos -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- html2canvas para exportar a JPG -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        body { background-color: #e5e7eb; font-family: 'Arial', sans-serif; }
+        
+        /* Contenedor del póster: Tamaño fijo para simular formato de impresión A3 apaisado (aprox 4:3) */
+        #poster-wrapper {
+            width: 1400px;
+            min-height: 990px;
+            background: white;
+            margin: 0 auto;
+            transform-origin: top left;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        /* Escala responsiva solo para la vista en pantalla, no afecta la exportación */
+        .responsive-container {
+            width: 100%;
+            overflow-x: auto;
+            padding: 20px;
+        }
+
+        .poster-title { color: #1e3a8a; }
+        .section-title { 
+            background-color: #1e3a8a; 
+            color: white; 
+            padding: 8px 15px; 
+            border-radius: 5px; 
+            margin-bottom: 15px;
+            font-size: 1.25rem;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        
+        .chart-container { position: relative; height: 250px; width: 100%; margin-bottom: 15px;}
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center pb-12">
+
+    <!-- Panel de Control -->
+    <div class="w-full bg-white shadow-md p-6 mb-6 flex flex-wrap justify-center items-center gap-6 sticky top-0 z-50">
+        <h2 class="text-xl font-bold text-gray-700">Generador de Póster</h2>
+        
+        <label for="csvFileInput" class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-6 rounded-lg shadow transition">
+            <span id="uploadText">1. Subir CSV</span>
+            <input type="file" id="csvFileInput" accept=".csv" class="hidden" />
+        </label>
+
+        <button id="downloadBtn" class="hidden bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-6 rounded-lg shadow transition flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clip-rule="evenodd" />
+            </svg>
+            2. Descargar Póster en JPG
+        </button>
+
+        <p id="statusText" class="text-gray-500 font-medium"></p>
+    </div>
+
+    <!-- Contenedor Responsivo para Scroll -->
+    <div class="responsive-container flex justify-center hidden" id="poster-area">
+        
+        <!-- EL PÓSTER (Este div se captura para la imagen) -->
+        <div id="poster-wrapper" class="p-10 border-4 border-blue-900 rounded-xl flex flex-col">
+            
+            <!-- CABECERA -->
+            <header class="text-center mb-8 border-b-4 border-blue-800 pb-6">
+                <h1 class="text-5xl font-extrabold poster-title mb-4 tracking-tight">Eficiencia del Gasto en Educación: Mapeo Sistemático (2014-2024)</h1>
+                <p class="text-2xl text-gray-700 font-semibold">Tus Nombres y Apellidos / Nombre de tu Universidad o Institución</p>
+                <p class="text-lg text-gray-500 mt-2">Contacto: correo@institucion.edu | Base de Datos: Scopus</p>
+            </header>
+
+            <!-- CUERPO DEL PÓSTER (3 Columnas) -->
+            <div class="flex-1 grid grid-cols-3 gap-8">
+                
+                <!-- COLUMNA 1: Intro y Metodología -->
+                <div class="col-span-1 flex flex-col gap-6">
+                    
+                    <section>
+                        <h2 class="section-title">1. Introducción y Objetivos</h2>
+                        <div class="text-lg text-gray-800 leading-relaxed text-justify">
+                            <p class="mb-3"><strong>¿Qué hicimos?</strong> Realizamos un mapeo sistemático de la literatura para evaluar el estado actual de la investigación sobre la <strong>eficiencia del gasto en educación</strong> durante la última década.</p>
+                            <p class="mb-2"><strong>Preguntas de Investigación (RQ):</strong></p>
+                            <ul class="list-disc pl-6 space-y-1 text-base">
+                                <li><strong>RQ1:</strong> Volumen y características de los estudios.</li>
+                                <li><strong>RQ1.1:</strong> Métodos de investigación aplicados.</li>
+                                <li><strong>RQ1.2:</strong> Distribución geográfica.</li>
+                                <li><strong>RQ2 y RQ3:</strong> Contextos de aplicación y categorías temáticas estructuradas.</li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section>
+                        <h2 class="section-title">2. Metodología (PRISMA)</h2>
+                        <div class="text-lg text-gray-800 leading-relaxed text-justify">
+                            <p class="mb-3"><strong>¿Cómo lo hicimos?</strong> Se aplicó el protocolo PRISMA para garantizar la reproducibilidad. Se extrajeron datos de Scopus limitando a documentos de acceso abierto entre 2014 y 2024.</p>
+                            
+                            <!-- Diagrama PRISMA simplificado -->
+                            <div class="bg-blue-50 border border-blue-200 p-4 rounded-lg text-center mt-4">
+                                <div class="bg-white border border-gray-300 p-2 rounded mb-2 shadow-sm">
+                                    <span class="font-bold">Identificación:</span> Búsqueda en Scopus
+                                </div>
+                                ⬇
+                                <div class="bg-white border border-gray-300 p-2 rounded my-2 shadow-sm">
+                                    <span class="font-bold">Cribado:</span> Filtros (Open Access, 2014-2024)
+                                </div>
+                                ⬇
+                                <div class="bg-blue-600 text-white font-bold p-3 rounded mt-2 shadow-md text-xl">
+                                    <span id="prismaTotal">0</span> Artículos Incluidos
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                </div>
+
+                <!-- COLUMNA 2: Resultados Visuales -->
+                <div class="col-span-1 flex flex-col gap-6 border-x-2 border-gray-200 px-6">
+                    <section>
+                        <h2 class="section-title">3. Resultados Visuales</h2>
+                        
+                        <!-- RQ1: Años -->
+                        <div class="mb-6">
+                            <h3 class="font-bold text-gray-700 text-center mb-2">Evolución Temporal (RQ1)</h3>
+                            <div class="chart-container" style="height: 200px;">
+                                <canvas id="posterChartYears"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- RQ1.1: Metodología -->
+                        <div class="mb-6">
+                            <h3 class="font-bold text-gray-700 text-center mb-2">Metodologías Aplicadas (RQ1.1)</h3>
+                            <div class="chart-container" style="height: 200px;">
+                                <canvas id="posterChartMethods"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- RQ1.2: Geografía -->
+                        <div>
+                            <h3 class="font-bold text-gray-700 text-center mb-2">Top Distribución Geográfica (RQ1.2)</h3>
+                            <div class="chart-container" style="height: 200px;">
+                                <canvas id="posterChartGeo"></canvas>
+                            </div>
+                        </div>
+
+                    </section>
+                </div>
+
+                <!-- COLUMNA 3: Conclusiones y Referencias -->
+                <div class="col-span-1 flex flex-col gap-6">
+                    
+                    <section>
+                        <h2 class="section-title">4. Hallazgos y Conclusiones</h2>
+                        <div class="text-lg text-gray-800 leading-relaxed text-justify bg-yellow-50 p-5 rounded-lg border-l-4 border-yellow-400 shadow-inner">
+                            <p class="mb-4"><strong>¿Qué encontramos? (Regla de 20s)</strong></p>
+                            
+                            <ul class="space-y-4">
+                                <li class="flex items-start">
+                                    <span class="text-2xl mr-2">📈</span>
+                                    <div>El pico máximo de publicaciones ocurrió en el año <strong id="hallazgoYear" class="text-blue-700">[Año]</strong>.</div>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-2xl mr-2">🔬</span>
+                                    <div>El método de investigación predominante en la evaluación de la eficiencia es <strong id="hallazgoMethod" class="text-blue-700">[Método]</strong>.</div>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-2xl mr-2">🌍</span>
+                                    <div>Geográficamente, <strong id="hallazgoGeo" class="text-blue-700">[País]</strong> lidera la producción científica en esta temática.</div>
+                                </li>
+                                <li class="flex items-start">
+                                    <span class="text-2xl mr-2">📚</span>
+                                    <div>La categoría temática principal en la que se estructuran estos estudios es <strong id="hallazgoTheme" class="text-blue-700">[Tema]</strong>.</div>
+                                </li>
+                            </ul>
+                        </div>
+                    </section>
+
+                    <section class="mt-auto">
+                        <h2 class="section-title">5. Referencias Destacadas</h2>
+                        <div class="text-sm text-gray-600 leading-tight">
+                            <p class="italic mb-2">Se analizaron un total de <span id="refTotal" class="font-bold">0</span> documentos. A continuación, un resumen de las revistas (RQ1.4) de mayor impacto:</p>
+                            <ul id="topRevistasList" class="list-decimal pl-5 space-y-2">
+                                <!-- Se llena por JS -->
+                            </ul>
+                        </div>
+                    </section>
+
+                </div>
+
+            </div>
+            
+            <!-- Pie de página del póster -->
+            <footer class="mt-8 pt-4 border-t-2 border-gray-200 text-center text-gray-400 text-sm font-bold">
+                Póster generado automáticamente mediante Análisis de Datos | Mapeo Sistemático
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        let charts = {};
+
+        // Función auxiliar para buscar columnas (Reutilizada del Dashboard)
+        function findColumn(row, keywords) {
+            const keys = Object.keys(row);
+            for (let key of keys) {
+                let isMatch = keywords.some(kw => key.toLowerCase().includes(kw.toLowerCase()));
+                if (isMatch) return row[key] ? row[key].trim() : "No Especificado";
+            }
+            return "No Especificado";
+        }
+
+        function countFrequencies(dataArray) {
+            let counts = {};
+            dataArray.forEach(item => {
+                if(item && item !== "No Especificado" && item !== "") {
+                    counts[item] = (counts[item] || 0) + 1;
+                }
+            });
+            let sortable = [];
+            for (var item in counts) { sortable.push([item, counts[item]]); }
+            sortable.sort(function(a, b) { return b[1] - a[1]; });
+            return sortable;
+        }
+
+        document.getElementById('csvFileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            document.getElementById('statusText').textContent = "Procesando...";
+            
+            Papa.parse(file, {
+                header: true,
+                skipEmptyLines: true,
+                complete: function(results) {
+                    processPosterData(results.data);
+                    document.getElementById('poster-area').classList.remove('hidden');
+                    document.getElementById('downloadBtn').classList.remove('hidden');
+                    document.getElementById('statusText').textContent = "¡Póster generado!";
+                    document.getElementById('uploadText').textContent = "Cambiar CSV";
+                }
+            });
+        });
+
+        function processPosterData(data) {
+            let years = [], methodologies = [], geographies = [], themes = [], journals = [];
+
+            data.forEach(row => {
+                years.push(findColumn(row, ['AÑO', 'ANO']));
+                methodologies.push(findColumn(row, ['Metodología', 'Q1.1']));
+                geographies.push(findColumn(row, ['Geográfico', 'Q1.2']));
+                themes.push(findColumn(row, ['CATEGORIA TEMATICA', 'Q3']));
+                journals.push(findColumn(row, ['REVISTA', 'Q1.4', 'NOMBRE DE LA REVISTA']));
+            });
+
+            // 1. Textos Dinámicos (Metodología y PRISMA)
+            document.getElementById('prismaTotal').textContent = data.length;
+            document.getElementById('refTotal').textContent = data.length;
+
+            // Frecuencias
+            let yearFreq = countFrequencies(years);
+            let methodFreq = countFrequencies(methodologies);
+            let geoFreq = countFrequencies(geographies);
+            let themeFreq = countFrequencies(themes);
+            let journalFreq = countFrequencies(journals);
+
+            // 2. Llenar Conclusiones Automáticas (Regla 20s)
+            document.getElementById('hallazgoYear').textContent = yearFreq.length > 0 ? yearFreq[0][0] : 'N/A';
+            document.getElementById('hallazgoMethod').textContent = methodFreq.length > 0 ? methodFreq[0][0] : 'N/A';
+            document.getElementById('hallazgoGeo').textContent = geoFreq.length > 0 ? geoFreq[0][0] : 'N/A';
+            document.getElementById('hallazgoTheme').textContent = themeFreq.length > 0 ? themeFreq[0][0] : 'N/A';
+
+            // 3. Llenar lista de Top Revistas
+            const listEl = document.getElementById('topRevistasList');
+            listEl.innerHTML = '';
+            journalFreq.slice(0, 3).forEach(item => {
+                let li = document.createElement('li');
+                li.innerHTML = `<strong>${item[0]}</strong> (${item[1]} artículos public.)`;
+                listEl.appendChild(li);
+            });
+
+            // 4. Renderizar Gráficos (Desactivamos animaciones para que html2canvas capture bien)
+            const commonChartOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false, // CRÍTICO para exportar a JPG
+                plugins: { legend: { display: false } }
+            };
+
+            // Gráfico Años
+            let yearLabels = yearFreq.map(f => f[0]).sort();
+            let yearData = yearLabels.map(y => yearFreq.find(f => f[0] === y)[1]);
+            renderChart('posterChartYears', 'bar', yearLabels, yearData, '#3b82f6', commonChartOptions);
+
+            // Gráfico Métodos (Pie)
+            renderChart('posterChartMethods', 'doughnut', 
+                methodFreq.slice(0, 5).map(f => f[0]), 
+                methodFreq.slice(0, 5).map(f => f[1]), 
+                ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'], 
+                { ...commonChartOptions, plugins: { legend: { position: 'right', labels:{boxWidth:10, font:{size:10}} } } }
+            );
+
+            // Gráfico Geografía (Horizontal Bar Top 5)
+            renderChart('posterChartGeo', 'bar', 
+                geoFreq.slice(0, 5).map(f => f[0]), 
+                geoFreq.slice(0, 5).map(f => f[1]), 
+                '#10b981', 
+                { ...commonChartOptions, indexAxis: 'y' }
+            );
+        }
+
+        function renderChart(canvasId, type, labels, data, colors, options) {
+            if (charts[canvasId]) { charts[canvasId].destroy(); }
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            charts[canvasId] = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: colors,
+                        borderWidth: 1
+                    }]
+                },
+                options: options
+            });
+        }
+
+        // Funcionalidad de Exportación a JPG
+        document.getElementById('downloadBtn').addEventListener('click', function() {
+            const posterNode = document.getElementById('poster-wrapper');
+            const originalTransform = posterNode.style.transform;
+            
+            // Forzar escala 1:1 para calidad óptima antes de capturar
+            posterNode.style.transform = 'none';
+            document.getElementById('statusText').textContent = "Generando imagen, por favor espera...";
+            
+            html2canvas(posterNode, {
+                scale: 2, // Doble resolución para mejor calidad de texto
+                useCORS: true,
+                backgroundColor: "#ffffff"
+            }).then(canvas => {
+                // Restaurar estilo original
+                posterNode.style.transform = originalTransform;
+                document.getElementById('statusText').textContent = "¡Descarga iniciada!";
+
+                // Crear enlace de descarga
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                const link = document.createElement('a');
+                link.download = 'Poster_Cientifico_Mapeo.jpg';
+                link.href = imgData;
+                link.click();
+            });
+        });
+    </script>
+</body>
+</html>
